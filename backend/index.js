@@ -285,3 +285,14 @@ app.post('/agent/execute', async (req, res) => {
     res.status(400).json({ error: e.message })
   }
 })
+
+// Get the server signer address (derived from PRIVATE_KEY)
+app.get('/wallet/from-env', (req, res) => {
+  try {
+    const { web3 } = getWeb3(req.query.chain)
+    const acct = getSigner(web3)   // derives account from PRIVATE_KEY
+    return res.json({ address: acct.address })
+  } catch (e) {
+    return res.status(400).json({ error: e.message })
+  }
+})
