@@ -228,32 +228,54 @@ app.post('/agent/execute', async (req, res) => {
   try {
     const { plan, abi, bytecode, address } = req.body
     if (!plan?.tool) throw new Error('Missing plan.tool')
-    const { web3 } = getWeb3(plan.params?.chain)
-    const signer = getSigner(web3)
-
-
-    let params = { ...(plan.params || {}) }
-    if (plan.tool === 'DEPLOY_CONTRACT' && params.tag === 'SimpleStorage') {
-      if (!abi || !bytecode) throw new Error('abi+bytecode required for SimpleStorage')
-      params = { ...params, abi, bytecode, args: [] }
-    }
-    if (plan.tool === 'CONTRACT_CALL') {
-      if (!abi || !address) throw new Error('abi+address required for contract call')
-      params = { ...params, abi, address }
-    }
-
-    enforcePolicy(plan.tool, params, web3)
 
     const tool = ToolRegistry[plan.tool]
     if (!tool) throw new Error(`Unknown tool ${plan.tool}`)
 
+    const chain = plan.params?.chain
+    const { web3 } = getWeb3(chain)
 
+    // signer only if needed
+    const needsSigner = tool.kind !== 'read'
+    const signer = needsSigner ? getSigner(web3) : null
+
+    // hydrate params from plan + body (allow overrides)
+    let params = { ...(plan.params || {}) }
+    if (address && !params.address) params.address = address
+
+    // SimpleStorage convenience
+    if (plan.tool === 'DEPLOY_CONTRACT' && params.tag === 'SimpleStorage') {
+      if (!abi || !bytecode) throw new Error('abi+bytecode required for SimpleStorage deploy')
+      params = { ...params, abi, bytecode, args: [] }
+    }
+
+    if (plan.tool === 'CONTRACT_CALL') {
+      if (!abi) throw new Error('abi is required for contract call')
+      if (!params.address) throw new Error('contract address is required for contract call')
+      params = { ...params, abi }
+    }
+
+    if (plan.tool === 'GET_BALANCE') {
+      if (!params.address) throw new Error('wallet address is required for balance check')
+    }
+
+    // policy checks (caps, blocklist, allowlist)
+    enforcePolicy(plan.tool, params, web3)
+
+    // simulate if supported
     let simulation = null
     if (tool.simulate) simulation = await tool.simulate({ web3, signer, params })
 
+    // auto-execute read tools (no approval needed)
+    if (tool.kind === 'read') {
+      const result = await tool.execute({ web3, signer, params })
+      audit('execute', { tool: plan.tool, params, result })
+      return res.json({ simulation, result })
+    }
 
+    // write/mixed need approval
     if (!req.body?.approve) {
-      return res.json({ simulation, note: 'Not executed; set approve=true to run.' })
+      return res.json({ simulation, note: 'Not executed; set approve=true to run (write op).' })
     }
 
     const result = await tool.execute({ web3, signer, params })
