@@ -43,8 +43,8 @@ def call_backend(method, path, **kwargs):
 # Backend URL (config)
 # ----------------------------
 with st.expander("Backend URL", expanded=False):
-    # Defaulting to the public Render URL as internal DNS (port 10000) is unreliable on Free Tier
-    BACKEND = st.text_input("REST base URL", value=os.environ.get("BLOCKAGENT_BACKEND", "https://blockagent-backend.onrender.com"))
+    # Defaulting to the public Render URL directly to avoid internal DNS issues
+    BACKEND = st.text_input("REST base URL", value="https://blockagent-backend.onrender.com")
     st.write("Tip: keep it as http://localhost:4000 while testing locally.")
     if st.button("Ping Backend"):
         data, err = call_backend("GET", "/ping")
