@@ -77,13 +77,6 @@ if go and user_text:
         else:
              st.warning("Please include the address in your request. Example: 'check balance of 0x...'")
 
-            data, err = call_backend("GET", "/balance", address=address, chain=intent.chain)
-            if err:
-                st.error(err)
-            else:
-                st.json(data)
-        else:
-            st.warning("Please provide an address (0x...)")
 
     elif intent.action == "DEPLOY_SIMPLE_STORAGE":
       
