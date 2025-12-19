@@ -5,6 +5,8 @@ import requests
 from intent_router import parse_prompt
 
 BACKEND = os.environ.get("BLOCKAGENT_BACKEND", "http://localhost:4000")
+if not BACKEND.startswith("http"):
+    BACKEND = f"https://{BACKEND}"
 API_SECRET = os.environ.get("API_SECRET", "")
 
 st.set_page_config(page_title="BlockAgent Toolkit", page_icon="🧰")
