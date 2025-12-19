@@ -38,9 +38,10 @@ def call_backend(method, path, **kwargs):
             headers["x-api-secret"] = API_SECRET
         
         if method == "GET":
-            r = requests.get(url, params=kwargs, headers=headers, timeout=30)
+            # Increased timeout to handle Render Free Tier cold starts (can take 50s+)
+            r = requests.get(url, params=kwargs, headers=headers, timeout=120)
         else:
-            r = requests.post(url, json=kwargs, headers=headers, timeout=60)
+            r = requests.post(url, json=kwargs, headers=headers, timeout=120)
         r.raise_for_status()
         return r.json(), None
     except Exception as e:
