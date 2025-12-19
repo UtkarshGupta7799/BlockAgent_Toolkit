@@ -6,7 +6,12 @@ from intent_router import parse_prompt
 
 BACKEND = os.environ.get("BLOCKAGENT_BACKEND", "http://localhost:4000")
 if not BACKEND.startswith("http"):
-    BACKEND = f"https://{BACKEND}"
+    # If it looks like a domain (has dots) and not localhost, assume HTTPS
+    # If it looks like an internal hostname (no dots) or localhost, assume HTTP
+    if "." in BACKEND and "localhost" not in BACKEND:
+        BACKEND = f"https://{BACKEND}"
+    else:
+        BACKEND = f"http://{BACKEND}"
 API_SECRET = os.environ.get("API_SECRET", "")
 
 st.set_page_config(page_title="BlockAgent Toolkit", page_icon="🧰")
@@ -54,8 +59,24 @@ if go and user_text:
             st.json(data)
 
     elif intent.action == "GET_BALANCE":
-        address = intent.address or st.text_input("Enter address to check:", key="addr_input")
+        # Check if address was in the prompt, otherwise check session state or ask
+        address = intent.address
+        
+        # If no address in prompt, we need a way to ask without losing context
+        # Ideally, the user provides it in the prompt. If not, we show an input but
+        # need to handle the re-run. For now, let's just warn if missing to keep it simple
+        # or rely on a separate "Address" field at the top if needed.
+        # BETTER FIX: Use session state to store the "last intent" and "last address"
+        
         if address:
+             data, err = call_backend("GET", "/balance", address=address, chain=intent.chain)
+             if err:
+                 st.error(err)
+             else:
+                 st.json(data)
+        else:
+             st.warning("Please include the address in your request. Example: 'check balance of 0x...'")
+
             data, err = call_backend("GET", "/balance", address=address, chain=intent.chain)
             if err:
                 st.error(err)

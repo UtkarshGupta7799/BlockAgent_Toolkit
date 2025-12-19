@@ -40,6 +40,6 @@ services:
         fromService:
           type: web
           name: blockagent-backend
-          property: host
+          property: hostport
       - key: API_SECRET
         sync: false # Should match backend secret
