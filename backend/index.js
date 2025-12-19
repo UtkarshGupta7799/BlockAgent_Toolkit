@@ -189,29 +189,35 @@ function enforcePolicy(toolName, params, web3) {
 
 app.post('/agent/plan', async (req, res) => {
   try {
-    const t = String(req.body?.prompt || '').toLowerCase()
-    const chain = req.body?.chain
+    const text = String(req.body?.prompt || '')
+    const t = text.toLowerCase().trim()
+    const chain = req.body?.chain || null
 
+    // robust address match (accept mixed case, 0x + 40 hex chars)
+    const addrMatch = text.match(/0x[a-fA-F0-9]{40}/)
+    const addr = addrMatch ? addrMatch[0] : (req.body?.address || null)
+
+    // amount (first number in text)
+    const amtMatch = text.match(/(\d+(\.\d+)?)/)
+    const amt = amtMatch ? parseFloat(amtMatch[0]) : (req.body?.amount || null)
 
     let plan = null
     if (t.includes('balance')) {
-      const addr = (t.match(/0x[a-f0-9]{20,}/i) || [])[0] || req.body?.address
       plan = { tool: 'GET_BALANCE', params: { address: addr, chain } }
     } else if (t.includes('send')) {
-      const to = (t.match(/0x[a-f0-9]{20,}/i) || [])[0] || req.body?.to
-      const amt = parseFloat((t.match(/(\d+(\.\d+)?)/) || [0])[0]) || req.body?.amount || 0
-      plan = { tool: 'SEND_NATIVE', params: { to, amount: amt, chain } }
+      plan = { tool: 'SEND_NATIVE', params: { to: addr, amount: amt, chain } }
     } else if (t.includes('deploy') && t.includes('storage')) {
       plan = { tool: 'DEPLOY_CONTRACT', params: { tag: 'SimpleStorage', chain } }
     } else if (t.includes('set value') || t.includes('set storage')) {
-      const val = parseInt((t.match(/(\d+)/) || [0])[0] || 0)
+      // default to 0 if no number found
+      const valMatch = text.match(/(\d+)/)
+      const val = valMatch ? parseInt(valMatch[0], 10) : 0
       plan = { tool: 'CONTRACT_CALL', params: { method: 'set', args: [val], write: true, chain } }
     } else if (t.includes('read') || t.includes('get value')) {
       plan = { tool: 'CONTRACT_CALL', params: { method: 'get', args: [], write: false, chain } }
     }
 
-    if (!plan) return res.json({ plan: null, note: 'UNKNOWN' })
-    res.json({ plan })
+    return res.json({ plan, note: plan ? 'OK' : 'UNKNOWN' })
   } catch (e) {
     res.status(400).json({ error: e.message })
   }

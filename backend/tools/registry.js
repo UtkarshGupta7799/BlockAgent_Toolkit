@@ -1,6 +1,10 @@
+// tools/registry.js
+// Capability registry for the Agent flow (EVM). Each tool describes what it does,
+// its expected params, an optional simulate(), and an execute().
+// We rely on the Web3 instance (passed in) for all chain interactions.
 
 export const ToolRegistry = {
-  
+  // -------- READ: GET BALANCE --------
   GET_BALANCE: {
     description: "Get native token balance for an address",
     params: { address: "0x...", chain: "celo|aurora|harmony" },
@@ -12,7 +16,7 @@ export const ToolRegistry = {
     kind: "read",
   },
 
-  
+  // -------- WRITE: SEND NATIVE (robust drop-in) --------
   SEND_NATIVE: {
     description: "Send native token from server signer to 'to'",
     params: { to: "0x...", amount: "in ether", chain: "celo|aurora|harmony" },
@@ -23,7 +27,7 @@ export const ToolRegistry = {
       const valueWei = web3.utils.toWei(String(params.amount), 'ether')
       const from = signer.address
 
-      
+      // Estimate gas (don't assume 21000; works for EOA->EOA and EOA->contract)
       const gas = await web3.eth.estimateGas({ from, to: params.to, value: valueWei })
       const gasPrice = await web3.eth.getGasPrice()
       const chainId = await web3.eth.getChainId()
@@ -36,7 +40,7 @@ export const ToolRegistry = {
       const valueWei = web3.utils.toWei(String(params.amount), 'ether')
       const from = signer.address
 
-     
+      // Estimate gas with guardrails
       const gas = await web3.eth
         .estimateGas({ from, to: params.to, value: valueWei })
         .catch((e) => {
@@ -55,7 +59,7 @@ export const ToolRegistry = {
         tx.maxPriorityFeePerGas = gp
         tx.maxFeePerGas = baseFee * 2n + gp // simple cushion
       } else {
-        
+        // Legacy style
         tx.gasPrice = await web3.eth.getGasPrice()
       }
 
@@ -73,7 +77,7 @@ export const ToolRegistry = {
     kind: "write",
   },
 
-  
+  // -------- WRITE: DEPLOY CONTRACT --------
   DEPLOY_CONTRACT: {
     description: "Deploy a contract from ABI+bytecode",
     params: { abi: "[]", bytecode: "0x...", args: "[]", chain: "celo|aurora|harmony" },
@@ -99,7 +103,7 @@ export const ToolRegistry = {
     kind: "write",
   },
 
- 
+  // -------- MIXED: CONTRACT CALL (read/write) --------
   CONTRACT_CALL: {
     description: "Call a contract method (read or write)",
     params: { abi: "[]", address: "0x...", method: "string", args: "[]", write: "bool", chain: "celo|aurora|harmony" },
