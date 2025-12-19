@@ -50,6 +50,12 @@ with st.expander("Backend URL", expanded=False):
         if err: st.error(err)
         else: st.success(f"Pong! {data}")
 
+# ----------------------------
+# Main natural-language input
+# ----------------------------
+user_text = st.text_input("Tell me what to do (try: 'create a new wallet', 'check my balance on celo', 'deploy simple storage')")
+go = st.button("Go")
+
 if go and user_text:
     intent = parse_prompt(user_text)
     st.write(f"Intent: `{intent.action}`  | Chain: `{intent.chain or 'default'}`")
