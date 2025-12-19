@@ -56,8 +56,13 @@ export function getWeb3(forChain) {
   if (!cfg || !cfg.rpc) {
     throw new Error(`Missing RPC for chain '${chain}'. Check .env`)
   }
-  return { web3: new Web3(new Web3.providers.HttpProvider(cfg.rpc)), chain }
+  const provider = new Web3.providers.HttpProvider(cfg.rpc, {
+    timeout: 10000, // 10s timeout for RPC calls
+  })
+  return { web3: new Web3(provider), chain }
 }
+
+app.get('/ping', (_, res) => res.json({ status: 'ok', time: new Date().toISOString() }))
 
 function getSigner(web3) {
   const pk = process.env.PRIVATE_KEY

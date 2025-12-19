@@ -22,6 +22,10 @@ st.caption("Web3.js REST API + Streamlit AI interface (Celo • Aurora • Harmo
 with st.expander("Backend URL", expanded=False):
     BACKEND = st.text_input("REST base URL", BACKEND)
     st.write("Tip: keep it as http://localhost:4000 while testing locally.")
+    if st.button("Ping Backend"):
+        data, err = call_backend("GET", "/ping")
+        if err: st.error(err)
+        else: st.success(f"Pong! {data}")
 
 user_text = st.text_input("Tell me what to do (try: 'create a new wallet', 'check my balance on celo', 'deploy simple storage')")
 go = st.button("Go")
