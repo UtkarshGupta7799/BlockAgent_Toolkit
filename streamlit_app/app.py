@@ -43,7 +43,8 @@ def call_backend(method, path, **kwargs):
 # Backend URL (config)
 # ----------------------------
 with st.expander("Backend URL", expanded=False):
-    BACKEND = st.text_input("REST base URL", BACKEND)
+    # Defaulting to the public Render URL as internal DNS (port 10000) is unreliable on Free Tier
+    BACKEND = st.text_input("REST base URL", value=os.environ.get("BLOCKAGENT_BACKEND", "https://blockagent-backend.onrender.com"))
     st.write("Tip: keep it as http://localhost:4000 while testing locally.")
     if st.button("Ping Backend"):
         data, err = call_backend("GET", "/ping")
@@ -53,7 +54,7 @@ with st.expander("Backend URL", expanded=False):
 # ----------------------------
 # Main natural-language input
 # ----------------------------
-user_text = st.text_input("Tell me what to do (try: 'create a new wallet', 'check my balance on celo', 'deploy simple storage')")
+user_text = st.text_input("Tell me what to do", key="main_prompt")
 go = st.button("Go")
 
 if go and user_text:
