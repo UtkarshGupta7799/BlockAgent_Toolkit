@@ -19,21 +19,9 @@ st.set_page_config(page_title="BlockAgent Toolkit", page_icon="🧰")
 st.title("🧰 BlockAgent Toolkit")
 st.caption("Web3.js REST API + Streamlit AI interface (Celo • Aurora • Harmony testnets)")
 
-with st.expander("Backend URL", expanded=False):
-    BACKEND = st.text_input("REST base URL", BACKEND)
-    st.write("Tip: keep it as http://localhost:4000 while testing locally.")
-    if st.button("Ping Backend"):
-        data, err = call_backend("GET", "/ping")
-        if err: st.error(err)
-        else: st.success(f"Pong! {data}")
-
-user_text = st.text_input("Tell me what to do (try: 'create a new wallet', 'check my balance on celo', 'deploy simple storage')")
-go = st.button("Go")
-
-
-if "storage_addr" not in st.session_state:
-    st.session_state.storage_addr = ""
-
+# ----------------------------
+# Helpers
+# ----------------------------
 def call_backend(method, path, **kwargs):
     url = f"{BACKEND}{path}"
     try:
@@ -50,6 +38,17 @@ def call_backend(method, path, **kwargs):
         return r.json(), None
     except Exception as e:
         return None, str(e)
+
+# ----------------------------
+# Backend URL (config)
+# ----------------------------
+with st.expander("Backend URL", expanded=False):
+    BACKEND = st.text_input("REST base URL", BACKEND)
+    st.write("Tip: keep it as http://localhost:4000 while testing locally.")
+    if st.button("Ping Backend"):
+        data, err = call_backend("GET", "/ping")
+        if err: st.error(err)
+        else: st.success(f"Pong! {data}")
 
 if go and user_text:
     intent = parse_prompt(user_text)
