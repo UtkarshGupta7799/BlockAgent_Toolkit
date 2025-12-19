@@ -16,23 +16,37 @@ app.use(express.json())
 // logging
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
-const accessLogStream = fs.createWriteStream(path.join(__dirname, 'access.log'), { flags: 'a' })
-app.use(morgan('combined', { stream: accessLogStream }))
+// Access logs to stdout (Render captures this)
+app.use(morgan('combined'))
 
 // rate limiter (50 req / 15 min per IP)
 const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 50 })
 app.use(limiter)
 
+// Security: Simple API Secret Middleware
+app.use((req, res, next) => {
+  const secret = process.env.API_SECRET
+  if (!secret) return next() // Open mode if not set
+  const auth = req.headers['x-api-secret']
+  if (auth !== secret) {
+    return res.status(401).json({ error: 'Unauthorized: Invalid or missing API_SECRET' })
+  }
+  next()
+})
+
 // audit helper
-const AUDIT_FILE = path.join(__dirname, 'audit.log')
 function audit(event, data) {
-  const line = JSON.stringify({ ts: new Date().toISOString(), event, ...data }) + '\n'
-  fs.appendFile(AUDIT_FILE, line, () => {})
+  // Stdout logging for audit trails
+  console.log(JSON.stringify({ ts: new Date().toISOString(), event, ...data }))
+}
+
+function isValidAddress(addr) {
+  return /^0x[a-fA-F0-9]{40}$/.test(addr)
 }
 
 const CHAIN_CONFIG = {
-  celo:    { rpc: process.env.CELO_RPC,    chainId: 44787 }, // Alfajores
-  aurora:  { rpc: process.env.AURORA_RPC,  chainId: 1313161555 }, // Aurora testnet
+  celo: { rpc: process.env.CELO_RPC, chainId: 44787 }, // Alfajores
+  aurora: { rpc: process.env.AURORA_RPC, chainId: 1313161555 }, // Aurora testnet
   harmony: { rpc: process.env.HARMONY_RPC, chainId: 1666700000 }, // Harmony testnet shard0
 }
 
@@ -66,6 +80,7 @@ app.post('/wallet/new', (req, res) => {
 app.get('/balance', async (req, res) => {
   try {
     const address = req.query.address
+    if (!isValidAddress(address)) throw new Error('Invalid address format')
     const { web3, chain } = getWeb3(req.query.chain)
     const balWei = await web3.eth.getBalance(address)
     const bal = web3.utils.fromWei(balWei, 'ether')
@@ -78,6 +93,7 @@ app.get('/balance', async (req, res) => {
 app.post('/tx/send', async (req, res) => {
   try {
     const { to, amount, chain } = req.body // amount in ETH/CELO/ONE
+    if (!isValidAddress(to)) throw new Error('Invalid "to" address format')
     const { web3 } = getWeb3(chain)
     const signer = getSigner(web3)
     const tx = {

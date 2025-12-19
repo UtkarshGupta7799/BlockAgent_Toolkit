@@ -1,0 +1,45 @@
+services:
+  # --------------------------------------------------------------------------------
+  # Service 1: Backend (Express/Node)
+  # --------------------------------------------------------------------------------
+  - type: web
+    name: blockagent-backend
+    env: node
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: node index.js
+    plan: free # or starter/standard
+    envVars:
+      - key: NODE_VERSION
+        value: 18.17.0
+      - key: PRIVATE_KEY
+        sync: false  # User must input this in Dashboard
+      - key: API_SECRET
+        sync: false  # User recommended to set checks on backend
+      - key: CELO_RPC
+        value: https://alfajores-forno.celo-testnet.org
+      - key: AURORA_RPC
+        value: https://testnet.aurora.dev
+      - key: HARMONY_RPC
+        value: https://api.s0.b.hmny.io
+
+  # --------------------------------------------------------------------------------
+  # Service 2: Frontend (Streamlit/Python)
+  # --------------------------------------------------------------------------------
+  - type: web
+    name: blockagent-frontend
+    env: python
+    rootDir: streamlit_app
+    buildCommand: pip install -r requirements.txt
+    startCommand: streamlit run app.py --server.port $PORT --server.address 0.0.0.0
+    plan: free
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.9.13
+      - key: BLOCKAGENT_BACKEND
+        fromService:
+          type: web
+          name: blockagent-backend
+          property: url
+      - key: API_SECRET
+        sync: false # Should match backend secret

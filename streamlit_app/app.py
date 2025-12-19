@@ -5,6 +5,7 @@ import requests
 from intent_router import parse_prompt
 
 BACKEND = os.environ.get("BLOCKAGENT_BACKEND", "http://localhost:4000")
+API_SECRET = os.environ.get("API_SECRET", "")
 
 st.set_page_config(page_title="BlockAgent Toolkit", page_icon="🧰")
 
@@ -25,10 +26,14 @@ if "storage_addr" not in st.session_state:
 def call_backend(method, path, **kwargs):
     url = f"{BACKEND}{path}"
     try:
+        headers = {}
+        if API_SECRET:
+            headers["x-api-secret"] = API_SECRET
+        
         if method == "GET":
-            r = requests.get(url, params=kwargs, timeout=30)
+            r = requests.get(url, params=kwargs, headers=headers, timeout=30)
         else:
-            r = requests.post(url, json=kwargs, timeout=60)
+            r = requests.post(url, json=kwargs, headers=headers, timeout=60)
         r.raise_for_status()
         return r.json(), None
     except Exception as e:
